@@ -1,3 +1,8 @@
+"""
+Tutorial:
+https://github.com/sentinel-hub/sentinelhub-py/blob/master/examples/processing_api_request.ipynb
+"""
+
 from sentinelhub import SHConfig
 
 # Setup Sentinelhub API interaction
@@ -30,12 +35,8 @@ betsiboka_size = bbox_to_dimensions(betsiboka_bbox, resolution=resolution)
 
 print(f'Image shape at {resolution} m resolution: {betsiboka_size} pixels')
 
-
-def increase_brightness(img, value):
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    cv2.add(hsv[:, :, 2], value)
-    out_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    return out_img
+def change_brightness(img, alpha, beta):
+   return cv2.addWeighted(img, alpha, np.zeros(img.shape, img.dtype),0, beta)
 
 
 # Example 1: True colour (PNG) on a specific date
@@ -417,4 +418,124 @@ img_float32 = img * norm_factor
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.imshow(img_float32)  # not brightened
 
+
+# Example 7: Raw dictionary request
+"""
+Previous request were built with some helper functions. Constructing a raw
+dictionary (without these helper functions) will give us full control over
+building the request body.
+"""
+
+request_raw_dict = {
+    "input": {
+        "bounds": {
+            "properties": {
+                "crs": betsiboka_bbox.crs.opengis_string
+            },
+            "bbox": list(betsiboka_bbox)
+        },
+        "data": [
+            {
+                "type": "S2L1C",
+                "dataFilter": {
+                    "timeRange": {"from": '2020-06-01T00:00:00Z', "to": '2020-06-30T00:00:00Z'},
+                    "mosaickingOrder": "leastCC"
+                }
+            }
+        ]
+    },
+    "output": {
+        "width": betsiboka_size[0],
+        "height": betsiboka_size[1],
+        "responses": [
+            {
+                "identifier": "default",
+                "format": {
+                    'type': MimeType.TIFF.get_string()
+                }
+            }
+        ]
+    },
+    "evalscript": evalscript_true_colour
+}
+
+# create request
+download_request = DownloadRequest(
+    request_type='POST',
+    url="https://services.sentinel-hub.com/api/v1/process",
+    post_values=request_raw_dict,
+    data_type=MimeType.TIFF,
+    headers={'content-type': 'application/json'},
+    use_session=True
+)
+
+# execute request
+client = SentinelHubDownloadClient(config=config)
+img = client.download(download_request)
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.imshow(change_brightness(image, 3.5, 0))
+ax.set_title("Raw dictionary request")
+
+
+# Example 8: Multiple timestamps data_type
+"""
+In this section, we will collect the data from multiple timestamps in by
+defining the 'time_interval' argument with some splitting-logic. The example
+will create least cloudy monthly images for the year 2019.
+
+For more complex cases (eg multiple timestamps or high-resolution data for
+larger areas), using the 'eo-learn' package is recommended.
+"""
+
+start = datetime.datetime(2019, 1, 1)
+end = datetime.datetime(2019, 12, 31)
+n_chunks = 13
+tdelta = (end - start) / n_chunks
+edges = [(start + i*tdelta).date().isoformat() for i in range(n_chunks)]
+slots = [(edges[i], edges[i+1]) for i in range(len(edges) - 1)]
+
+print('\nMonthly time windows:')
+for slot in slots:
+    print(slot)
+
+def get_true_colour_request(time_interval):
+    return SentinelHubRequest(
+        evalscript=evalscript_true_colour,
+        input_data=[
+            SentinelHubRequest.input_data(
+                data_collection=DataCollection.SENTINEL2_L1C,
+                time_interval=time_interval,
+                mosaicking_order='leastCC'
+            )
+        ],
+        responses=[
+            SentinelHubRequest.output_response('default', MimeType.PNG)
+        ],
+        bbox=betsiboka_bbox,
+        size=betsiboka_size,
+        config=config
+    )
+
+# create a list of requests
+list_of_requests = [get_true_colour_request(slot) for slot in slots]
+list_of_requests = [request.download_list[0] for request in list_of_requests]
+
+# download data with multiple threads
+data = SentinelHubDownloadClient(config=config).download(list_of_requests, max_threads=5)
+
+# plotting
+ncols = 4
+nrows = 3
+aspect_ratio = betsiboka_size[0] / betsiboka_size[1]
+subplot_kw = {'xticks': [], 'yticks': [], 'frame_on': False}
+
+fig, axs = plt.subplots(ncols=ncols, nrows=nrows,
+                        figsize=(5 * ncols * aspect_ratio, 5 * nrows),
+                        subplot_kw=subplot_kw)
+for idx, image in enumerate(data):
+    ax = axs[idx // ncols][idx % ncols]
+    ax.imshow(change_brightness(image, 2, 0))
+    ax.set_title(f'{slots[idx][0]}  -  {slots[idx][1]}', fontsize=10)
+plt.tight_layout()
 plt.show()
