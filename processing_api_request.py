@@ -16,7 +16,7 @@ if CLIENT_ID and CLIENT_SECRET:
     config.sh_client_secret = CLIENT_SECRET
 
 if config.sh_client_id == '' or config.sh_client_secret == '':
-    print("LOL Warning! To use Sentinel Hub services, please provide the credentials (client ID and client secret).")
+    print("Warning! To use Sentinel Hub services, please provide the credentials (client ID and client secret).")
 
 
 import os
