@@ -20,5 +20,4 @@ contextlib2
 
 sentinelhub
 basemap
-
-pycodestyle
+geopandas
