@@ -16,7 +16,7 @@ if CLIENT_ID and CLIENT_SECRET:
     config.sh_client_secret = CLIENT_SECRET
 
 if config.sh_client_id == '' or config.sh_client_secret == '':
-    print("LOL Warning! To use Sentinel Hub services, please provide the credentials (client ID and client secret).")
+    print("Warning! To use Sentinel Hub services, please provide the credentials (client ID and client secret).")
 
 
 import os
@@ -29,14 +29,13 @@ from sentinelhub import MimeType, CRS, BBox, SentinelHubRequest, \
     SentinelHubDownloadClient, DataCollection, bbox_to_dimensions, DownloadRequest
 
 betsiboka_coords_wgs84 = [46.16, -16.15, 46.51, -15.58]
-resolution = 60
 betsiboka_bbox = BBox(bbox=betsiboka_coords_wgs84, crs=CRS.WGS84)
-betsiboka_size = bbox_to_dimensions(betsiboka_bbox, resolution=resolution)
+betsiboka_size = bbox_to_dimensions(betsiboka_bbox, resolution=60)
 
 print(f'Image shape at {resolution} m resolution: {betsiboka_size} pixels')
 
 def change_brightness(img, alpha, beta):
-   return cv2.addWeighted(img, alpha, np.zeros(img.shape, img.dtype),0, beta)
+   return cv2.addWeighted(img, alpha, np.zeros(img.shape, img.dtype), 0, beta)
 
 
 # Example 1: True colour (PNG) on a specific date
