@@ -21,3 +21,4 @@ contextlib2
 sentinelhub
 basemap
 geopandas
+descartes
