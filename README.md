@@ -1,3 +1,3 @@
 # summer-project
 
-Speaking of satellite imagery, huh
+Satellite imagery for the better
