@@ -19,3 +19,6 @@ pandas
 contextlib2
 
 sentinelhub
+basemap
+
+pycodestyle
