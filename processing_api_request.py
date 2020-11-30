@@ -96,7 +96,7 @@ ax.hist(image.flatten(), bins=256)
 
 # Example 1.1 Adding cloud mask data_collection
 """
-It is possilbe to obtain cloud masks when requesting Sentinel-2 data by using
+It is possible to obtain cloud masks when requesting Sentinel-2 data by using
 the cloud mask band (CLM) or cloud probabilities band (CLP).
 Also, the factor for increasing the image brightness can be included in the
 evalscript.
