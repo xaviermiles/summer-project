@@ -22,3 +22,4 @@ protobuf
 sentinelhub
 geopandas
 descartes
+pydot
