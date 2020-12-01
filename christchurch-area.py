@@ -4,6 +4,7 @@ Aim is to download some images from around Christchurch and see resolution etc.
 
 import itertools
 import cv2
+from PIL import Image
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -88,26 +89,23 @@ def show_splitter(splitter, alpha=0.2, area_buffer=0.2, show_legend=False, title
 
 
 # Get the Canterbury Polygon from the JSON file
-INPUT_FILE = './canterbury_images/canterbury_shape.json'
+POLYGON_INPUT_FILE = './canterbury_images/canterbury_shape.json'
 
-geo_json = read_data(INPUT_FILE)
+geo_json = read_data(POLYGON_INPUT_FILE)
 canterbury_shape = shape(geo_json["features"][0]["geometry"])
 
 # Split area into smaller BBoxes using different splitters
-bbox_splitter = BBoxSplitter([canterbury_shape], CRS.WGS84, (5, 4))
-# show_splitter(bbox_splitter, show_legend=True, title="BBoxSplitter")
-
-bbox_splitter_reduced = BBoxSplitter([canterbury_shape], CRS.WGS84, (5, 4), reduce_bbox_sizes=True)
-# show_splitter(bbox_splitter_reduced, show_legend=True, title="BBoxSplitter (finer)")
+# not BBoxSplitter, picked OsmSplitter as it is relatively eady-to-use
 
 osm_splitter = OsmSplitter([canterbury_shape], CRS.WGS84, zoom_level=8)
-show_splitter(osm_splitter, title="OsmSplitter (zoom=8)")
-plt.show()
+show_splitter(osm_splitter, title=f"OsmSplitter (zoom={osm_splitter.zoom_level})")
+
 
 osm_bbox_list = osm_splitter.get_bbox_list()
 osm_info_list = osm_splitter.get_info_list()
-print('Each bounding box also has some info about how it was created.\nExample:\n'
-      'bbox: {}\ninfo: {}\n'.format(osm_bbox_list[0].__repr__(), osm_info_list[0]))
+print(osm_bbox_list)
+print(osm_info_list)
+
 
 evalscript_true_colour = """
     //VERSION=3
@@ -136,7 +134,8 @@ def get_true_colour_request(bbox, resolution):
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L1C,
-                time_interval=('2020-06-12', '2020-06-13')
+                time_interval=('2020-06-01', '2020-06-30'),  # month-long interval
+                mosaicking_order='leastCC'
             )
         ],
         responses=[
@@ -148,26 +147,32 @@ def get_true_colour_request(bbox, resolution):
     )
 
 
+# Configure group of requests into list
 list_of_requests = [get_true_colour_request(bbox, resolution=120) for bbox in osm_bbox_list]
 list_of_requests = [request.download_list[0] for request in list_of_requests]
 
-# download data with multiple threads
+# download data with multiple threads, then save to disk (if desired/SAVE_IMAGES==True)
 canterbury_images = SentinelHubDownloadClient(config=config).download(list_of_requests, max_threads=5)
+SAVE_IMAGES = True
+if SAVE_IMAGES:
+    for idx, image in enumerate(canterbury_images):
+        brightened_image = change_brightness(image, 3.5)
+        img_to_save = Image.fromarray(brightened_image)
+        img_to_save.save(f'canterbury_images/osm_zoom{osm_splitter.zoom_level}_{idx}.jpeg')
 
-#plt.imshow(change_brightness(canterbury_images[600], 3.5))
 
 # PLOTTING
-# ncols = 4; nrows = 3
-# size = bbox_to_dimensions(osm_bbox_list[0], resolution=40)
-# aspect_ratio = size[0] / size[1]
-# subplot_kw = {'xticks': [], 'yticks': [], 'frame_on': True}
+ncols = 4; nrows = 3
+size = bbox_to_dimensions(osm_bbox_list[0], resolution=40)
+aspect_ratio = size[0] / size[1]
+subplot_kw = {'xticks': [], 'yticks': [], 'frame_on': True}
 
-# fig, axs = plt.subplots(ncols=ncols, nrows=nrows,
-#                         figsize=(5 * ncols * aspect_ratio, 5 * nrows),
-#                         subplot_kw=subplot_kw)
+fig, axs = plt.subplots(ncols=ncols, nrows=nrows,
+                        figsize=(5 * ncols * aspect_ratio, 5 * nrows),
+                        subplot_kw=subplot_kw)
 # for idx, image in enumerate(canterbury_images):
 #     ax = axs[idx // ncols][idx % ncols]
 #     ax.imshow(change_brightness(image, 2, 0))
 #     ax.set_title(f'{slots[idx][0]}  -  {c[idx][1]}', fontsize=10)
 # plt.tight_layout()
-# plt.show()
+plt.show()
