@@ -13,10 +13,46 @@ from sentinelhub import CRS
 
 
 def change_brightness(img, alpha, beta=0):
+    """
+    Alter brightness of image, while keeping the values within the valid ranges (eg 0-255).
+    Alpha (multiplicative term) must be specified, whereas beta (additive term) is zero by default.
+    """
     return cv2.addWeighted(img, alpha, np.zeros(img.shape, img.dtype), 0, beta)
 
 
+def show_area(area_shape, area_buffer=0.3):
+    """
+    Plots the area described by a polygon on a globe/world map
+    """
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111)
+
+    minx, miny, maxx, maxy = area_shape.bounds
+    lng, lat = (minx + maxx) / 2, (miny + maxy) / 2
+    print(lng, lat)
+
+    m = Basemap(projection='ortho', lat_0=lat, lon_0=lng, resolution='l')
+    m.drawcoastlines()
+    m.bluemarble()
+
+    if isinstance(area_shape, Polygon):
+        area_shape = [area_shape]
+    for polygon in area_shape:
+        # print(polygon)
+        # x, y = np.array(polygon.boundary)[0]
+        m_poly = []
+        for x, y in np.array(polygon.boundary):
+            m_poly.append(m(x, y))
+        ax.add_patch(plt_polygon(np.array(m_poly), closed=True, facecolor='red', edgecolor='red'))
+
+    plt.tight_layout()
+    plt.show()
+
+
 def show_splitter(splitter, alpha=0.2, area_buffer=0.2, show_legend=False, title=""):
+    """
+    Plots the bboxes which will be constructed from the polygon
+    """
     area_bbox = splitter.get_area_bbox()
     minx, miny, maxx, maxy = area_bbox
     lng, lat = area_bbox.middle
@@ -72,3 +108,4 @@ def show_splitter(splitter, alpha=0.2, area_buffer=0.2, show_legend=False, title
 
     plt.title(title)
     plt.tight_layout()
+    plt.show()
