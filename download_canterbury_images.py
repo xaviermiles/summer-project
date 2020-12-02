@@ -82,7 +82,7 @@ def get_true_colour_request(bbox, resolution):
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L1C,
                 time_interval=('2020-06-01', '2020-06-30'),  # month-long interval
-                mosaicking_order='leastCC'
+                mosaicking_order='leastCC'  # least cloud coverage
             )
         ],
         responses=[
