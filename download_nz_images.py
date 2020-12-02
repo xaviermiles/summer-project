@@ -33,7 +33,7 @@ def get_true_colour_request(bbox, resolution, evalscript):
         resolution:
         evalscript:
 
-    Returns: SentinelHubRequest configured according to provided arguments. Currently gets images from Jan-Jun 2020 and
+    Returns: SentinelHubRequest configured according to provided arguments. Currently gets images from Mar-Apr 2020 and
         pieces together the images with the least cloud coverage.
 
     """
