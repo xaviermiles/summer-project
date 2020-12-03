@@ -12,18 +12,13 @@ from sentinelhub import SHConfig, MimeType, read_data, SentinelHubRequest, Senti
 from shapely.geometry import shape
 
 from image_utils import *  # misc custom image functions
-
+import api_config  # includes API keys for sentinelhub
 
 # Configure connection to sentinelhub website
-CLIENT_ID = '1089387f-e062-426a-a7ec-9c44d7f7a3c0'
-CLIENT_SECRET = 'ADB|+iYvOF23Uz5lQ<rhz3Of+NO)TZ{]b*Fe)#D.'
-INSTANCE_ID = 'cae04732-5ed8-40c2-a2c6-461e44f55720'
-
 config = SHConfig()
-config.sh_client_id = CLIENT_ID
-config.sh_client_secret = CLIENT_SECRET
-config.instance_id = INSTANCE_ID
-
+config.sh_client_id = api_config.client_id
+config.sh_client_secret = api_config.client_secret
+config.instance_id = api_config.instance_id
 
 def get_true_colour_request(bbox, resolution, evalscript):
     """
