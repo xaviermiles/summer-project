@@ -20,6 +20,7 @@ config.sh_client_id = api_config.client_id
 config.sh_client_secret = api_config.client_secret
 config.instance_id = api_config.instance_id
 
+
 def get_true_colour_request(bbox, resolution, evalscript):
     """
 

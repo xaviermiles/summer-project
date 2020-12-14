@@ -27,7 +27,9 @@ def show_area(area_shape, area_buffer=0.3):
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111)
 
-    minx, miny, maxx, maxy = area_shape.bounds
+    print(tuple(map(float, area_shape.bounds)))
+    print(tuple(map(lambda bound: (1 + area_buffer) * float(bound), area_shape.bounds)))
+    minx, miny, maxx, maxy = tuple(map(lambda bound: (1 + area_buffer) * float(bound), area_shape.bounds))
     lng, lat = (minx + maxx) / 2, (miny + maxy) / 2
     print(lng, lat)
 
