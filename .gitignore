@@ -1,3 +1,8 @@
-api_config.py
-__pycache__/.
-MW landcover data/.
+__pycache__/
+.ipynb_checkpoints/
+.idea/
+
+api_config.py/
+MW landcover data/
+canterbury_images/
+nz_images/
