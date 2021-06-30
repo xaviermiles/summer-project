@@ -2,7 +2,11 @@ __pycache__/
 .ipynb_checkpoints/
 .idea/
 
+# API keys
 api_config.py/
+
+# Data
 MW landcover data/
 canterbury_images/
 nz_images/
+mask_rcnn_coco.h5

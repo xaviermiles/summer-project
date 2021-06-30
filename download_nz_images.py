@@ -1,6 +1,6 @@
 """
-Aim to modularise download_canterbury_images.py into functions such that the process can be applied to any JSON file
-containing a polygon. Will test with the NZ shape obtained from the countries.json file.
+Imports New Zealand shape from JSON file, splits this into manageable bounding boxes, and sends a request to SentinelHub
+API to get set of satellite images.
 """
 
 import os
@@ -11,7 +11,7 @@ from sentinelhub import SHConfig, MimeType, read_data, SentinelHubRequest, Senti
     bbox_to_dimensions, OsmSplitter
 from shapely.geometry import shape
 
-from image_utils import *  # misc custom image functions
+import image_utils # misc custom image functions
 import api_config  # includes API keys for sentinelhub
 
 # Configure connection to sentinelhub website
@@ -39,9 +39,9 @@ def get_true_colour_request(bbox, resolution, evalscript):
         evalscript=evalscript,
         input_data=[
             SentinelHubRequest.input_data(
-                data_collection=DataCollection.SENTINEL2_L1C,
-                time_interval=('2020-03-01', '2020-04-30'),  # month-long interval
-                mosaicking_order='leastCC'
+                data_collection=DataCollection.SENTINEL2_L1C,  # which satellite?
+                time_interval=('2020-03-01', '2020-04-30'),  # two month long interval
+                mosaicking_order='leastCC'  # least cloud-coverage
             )
         ],
         responses=[
@@ -57,7 +57,7 @@ def download_images(geo_shape, osm_zoom_level, resolution, out_folder='', plot_s
     """
 
     Args:
-        geo_shape:
+        geo_shape: geometry (eg Polygon, MultiPolygon) generated using shapely.geometry
         osm_zoom_level: int, refer to https://wiki.openstreetmap.org/wiki/Zoom_levels
         resolution: float, resolution of desired images in metres. To see valid values, refer to
             https://docs.sentinel-hub.com/api/latest/data/sentinel-2-l1c/
@@ -71,10 +71,10 @@ def download_images(geo_shape, osm_zoom_level, resolution, out_folder='', plot_s
     osm_bbox_list = osm_splitter.get_bbox_list()
 
     if plot_splitting:
-        show_splitter(osm_splitter, title=f"OsmSplitter (zoom={osm_zoom_level})")
+        image_utils.show_splitter(osm_splitter, title=f"OsmSplitter (zoom={osm_zoom_level})")
 
     # This evalscript tells sentinelhub to fetch the true colour images
-    evalscript_true_colour = """
+    evalscript_true_colour = """"
         //VERSION=3
 
         function setup() {

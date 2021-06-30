@@ -17,5 +17,7 @@ for j in json_contents:
         combined_json_contents[key] = value
 
 # Write out JSON file
-with open('./nz_images/combined_annotations.json', 'w') as outfile:
+with open('./nz_images/manual_annotations.json', 'w') as outfile:
     json.dump(combined_json_contents, outfile)
+
+print("Finished")
