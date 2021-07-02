@@ -262,4 +262,3 @@ def resize_image_to_square(image, min_dim=None, max_dim=None):
     window = (top_pad, left_pad, h + top_pad, w + left_pad)
     
     return square_image.astype(image_dtype)
-    
