@@ -6,7 +6,7 @@ __pycache__/
 api_config.py/
 
 # Data
-MW landcover data/
+sentinelhub-tutorials/data
+data/
 canterbury_images/
 nz_images/
-mask_rcnn_coco.h5

@@ -8,10 +8,10 @@ from timeit import default_timer as timer
 
 from PIL import Image
 from sentinelhub import SHConfig, MimeType, read_data, SentinelHubRequest, SentinelHubDownloadClient, DataCollection, \
-    bbox_to_dimensions, OsmSplitter
+    bbox_to_dimensions, OsmSplitter, CRS
 from shapely.geometry import shape
 
-import image_utils # misc custom image functions
+import image_utils  # misc custom image functions
 import api_config  # includes API keys for sentinelhub
 
 # Configure connection to sentinelhub website
@@ -21,22 +21,40 @@ config.sh_client_secret = api_config.client_secret
 config.instance_id = api_config.instance_id
 
 
-def get_true_colour_request(bbox, resolution, evalscript):
+def get_true_colour_request(bbox, resolution):
     """
+    Get SentinelHubRequest for an satellite image of specified location (bbox), by retrieving all images of that
+    location from Mar-Apr 2020 and piecing together the images with the least cloud coverage.
 
     Args:
         bbox:
-        resolution:
-        evalscript:
+        resolution: int, how many physical metres each pixel covers up/across
 
-    Returns: SentinelHubRequest configured according to provided arguments. Currently gets images from Mar-Apr 2020 and
-        pieces together the images with the least cloud coverage.
+    Returns: SentinelHubRequest configured according to provided arguments.
 
     """
     size = bbox_to_dimensions(bbox, resolution)
 
+    # This evalscript tells sentinelhub to fetch the true colour images and brighten/multiply bands by 3
+    evalscript_true_colour = """"
+        //VERSION=3
+
+        function setup() {
+            return {
+                input: [{
+                    bands: ["B02", "B03", "B04"]
+                }],
+                output: { bands: 3 }
+            };
+        }
+
+        function evaluatePixel(sample) {
+            return [3 * sample.B04, 3 * sample.B03, 3 * sample.B02];
+        }
+    """
+
     return SentinelHubRequest(
-        evalscript=evalscript,
+        evalscript=evalscript_true_colour,
         input_data=[
             SentinelHubRequest.input_data(
                 data_collection=DataCollection.SENTINEL2_L1C,  # which satellite?
@@ -64,7 +82,7 @@ def download_images(geo_shape, osm_zoom_level, resolution, out_folder='', plot_s
         out_folder: string, folder to write retrieved images into. If empty, images are not saved.
         plot_splitting: boolean
 
-    Returns: Null. Writes images to file and maybe produces plots (depending on arguments).
+    Returns: None
 
     """
     osm_splitter = OsmSplitter([geo_shape], crs=CRS.WGS84, zoom_level=osm_zoom_level)
@@ -73,27 +91,8 @@ def download_images(geo_shape, osm_zoom_level, resolution, out_folder='', plot_s
     if plot_splitting:
         image_utils.show_splitter(osm_splitter, title=f"OsmSplitter (zoom={osm_zoom_level})")
 
-    # This evalscript tells sentinelhub to fetch the true colour images
-    evalscript_true_colour = """"
-        //VERSION=3
-
-        function setup() {
-            return {
-                input: [{
-                    bands: ["B02", "B03", "B04"]
-                }],
-                output: { bands: 3 }
-            };
-        }
-
-        function evaluatePixel(sample) {
-            return [3 * sample.B04, 3 * sample.B03, 3 * sample.B02];
-        }
-    """
-
     # Configure group of requests into list
-    list_of_requests = [get_true_colour_request(bbox, resolution=resolution, evalscript=evalscript_true_colour)
-                        for bbox in osm_bbox_list]
+    list_of_requests = [get_true_colour_request(bbox, resolution=resolution) for bbox in osm_bbox_list]
     list_of_requests = [request.download_list[0] for request in list_of_requests]
 
     # Download data (using multiple threads)
@@ -108,25 +107,22 @@ def download_images(geo_shape, osm_zoom_level, resolution, out_folder='', plot_s
     print('...finished ({:.2f} sec)'.format(time_elapsed))
 
     if out_folder:
+        out_folder_full = os.path.join(out_folder, f'osm{osm_zoom_level}')
+        if not os.path.exists(out_folder_full):
+            os.mkdir(out_folder_full)
+
         for idx, image in enumerate(images):
-            # Get BBox information
             minx, miny, maxx, maxy = osm_bbox_list[idx]
             bbox_string = '{:05.2f}_{:05.2f}__{:05.2f}_{:05.2f}'.format(minx, miny, maxx, maxy)
 
-            # Create folder to save to (if it doesn't already exist)
-            if not os.path.exists(f'{out_folder}/osm{osm_zoom_level}'):
-                os.mkdir(f'{out_folder}/osm{osm_zoom_level}')
-
-            # Save image to folder
             img_to_save = Image.fromarray(image)
-            img_to_save.save(f"{out_folder}/osm{osm_zoom_level}/osm{osm_zoom_level}_res{resolution}m"
-                             f"__{bbox_string}.jpeg")
+            img_fpath = os.path.join(out_folder_full, f'osm{osm_zoom_level}_res{resolution}m__{bbox_string}.jpeg')
+            img_to_save.save(img_fpath)
 
 
-# Get NZ shape
-COUNTRIES_FILE = 'countries.json'
-countries_geo = read_data(COUNTRIES_FILE)
-nz_shape = shape(countries_geo["features"][172]["geometry"])
+if __name__ == "__main__":
+    COUNTRIES_FILE = os.path.join('data', 'data/countries.json')
+    countries_geo = read_data(COUNTRIES_FILE)
+    nz_shape = shape(countries_geo["features"][172]["geometry"])
 
-# Download and save NZ satellite images
-download_images(nz_shape, osm_zoom_level=11, resolution=10, out_folder='nz_images', plot_splitting=False)
+    download_images(nz_shape, osm_zoom_level=11, resolution=10, out_folder='nz_images', plot_splitting=False)

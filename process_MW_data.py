@@ -26,7 +26,7 @@ def check_for_overlap(bbox, polygon_info):
         bbox: shapely.geometry box object, corresponding to the bounding box of a satellite image
         polygon_info: row of data2018
 
-    Returns: Boolean indicating whether the any of the Polygon is contained within the bbox
+    Returns: Boolean indicating whether any part of the Polygon is contained within the bounding box
 
     """
     area_in_bbox = bbox.intersection(polygon_info['Location'])
@@ -67,7 +67,14 @@ def construct_json_region(image_w, image_h, image_bbox, row):
     }
 
 
-def create_json_label_file(image_filepaths, out_filepath):
+def create_json_label_file(MW_data, image_filepaths, out_filepath):
+    """
+    Args:
+        image_filepaths: filepaths for satellite images
+        out_filepath: where to save output JSON file
+
+    Returns: None
+    """
     out_json = {}
 
     for image_num, image_filepath in enumerate(image_filepaths):
@@ -82,7 +89,7 @@ def create_json_label_file(image_filepaths, out_filepath):
         bbox = box(minx, miny, maxx, maxy)
 
         # Find the polygons which overlap with the bbox
-        overlapping_polygons = data2018.copy().loc[data2018.apply(lambda row: check_for_overlap(bbox, row), axis=1)]
+        overlapping_polygons = data2018.copy().loc[MW_data.apply(lambda row: check_for_overlap(bbox, row), axis=1)]
         # get_overlap(...) may return a list[Polygon] if there are multiple distinct areas of overlap between the bbox
         # and the Polygon. explode(...) creates a row for each of the Polygons in the list[Polygon]
         overlapping_polygons['Overlap'] = [get_overlap(bbox, plygn) for plygn in overlapping_polygons['Location']]
@@ -111,8 +118,7 @@ def create_json_label_file(image_filepaths, out_filepath):
 
 
 if __name__ == '__main__':
-    MW_DATA_FILEPATH = os.path.join('MW landcover data', 'CSV-files',
-                                    'lcdb-v50-land-cover-database-version-50-mainland-new-zealand.csv')
+    MW_DATA_FILEPATH = os.path.join('data', 'lcdb-v50-land-cover-database-version-50-mainland-new-zealand.csv')
     import_start = timer()
     with open(MW_DATA_FILEPATH) as csvfile:
         MW_data = pd.read_csv(csvfile)
@@ -131,7 +137,7 @@ if __name__ == '__main__':
     print(f"Time to transform locations into Polygons: {transform_end - transform_start}s")
 
     # Construct dictionary where keys are class-names and values are the associated first-order class-names
-    first_order_names = {
+    FIRST_ORDER_NAMES = {
         **dict.fromkeys(['Built-up Area (settlement)', 'Urban Parkland/Open Space', 'Surface Mine or Dump',
                          'Transport Infrastructure'],
                         'Artificial Surfaces'),
@@ -152,11 +158,10 @@ if __name__ == '__main__':
         **dict.fromkeys(['Exotic Forest', 'Forest - Harvested', 'Deciduous Hardwoods', 'Indigenous Forest', 'Mangrove'],
                         'Forest')
     }
-
     # Remove polygons which don't have a class
     data2018 = data2018[data2018['Name'] != "Not land"]
     # Create column which contains the first order names
-    data2018['First_Order_Name'] = data2018['Name'].map(first_order_names)
+    data2018['First_Order_Name'] = data2018['Name'].map(FIRST_ORDER_NAMES)
 
     # Check for NaN values:
     data2018_nan = data2018[data2018.isna().any(axis=1)]
@@ -167,11 +172,9 @@ if __name__ == '__main__':
 
     # WARNING: requires that the folder only contains appropriate JPEG files (no other files or folders)
     IMAGES_FOLDER = os.path.join('nz_images', 'osm11')
-    # image_filenames = [os.path.join(IMAGES_FOLDER, a) for a in os.listdir(IMAGES_FOLDER)]
-    image_filenames = [os.path.join(IMAGES_FOLDER, "osm11_res10m__167.70_-46.07__167.87_-45.95.jpeg"),
-                       os.path.join(IMAGES_FOLDER, "osm11_res10m__167.87_-45.09__168.05_-44.96.jpeg")]
+    image_filenames = [os.path.join(IMAGES_FOLDER, a) for a in os.listdir(IMAGES_FOLDER)]
 
     create_json_start = timer()
-    create_json_label_file(image_filenames, os.path.join('nz_images', 'MW_annotations.json'))
+    create_json_label_file(data2018, image_filenames, os.path.join('nz_images', 'MW_annotations.json'))
     create_json_end = timer()
     print(f"Time to create JSON file: {create_json_end - create_json_start}s")
