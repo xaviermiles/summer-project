@@ -3,7 +3,7 @@ __pycache__/
 .idea/
 
 # API keys
-api_config.py/
+api_config.py
 
 # Data
 sentinelhub-tutorials/data
